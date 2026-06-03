@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { randomBytes, createHmac } from "node:crypto";
-import { signUpPayloadModel } from "./models.js";
+import { signUpPayloadModel, signInPayloadModel } from "./models.js";
 import { db } from "../../db/index.js";
 import { usersTable } from "../../db/schema.js";
 import { eq } from "drizzle-orm";
@@ -44,12 +44,49 @@ class AuthenticationController {
       })
       .returning({ id: usersTable.id });
 
-    return res
-      .status(201)
-      .json({
-        message: "user has been created successfully",
-        data: { id: result?.id },
+    return res.status(201).json({
+      message: "user has been created successfully",
+      data: { id: result?.id },
+    });
+  }
+
+  public async handleSignIn(req: Request, res: Response) {
+    const validationResult = await signInPayloadModel.safeParseAsync(req.body);
+    if (validationResult.error) {
+      return res.status(400).json({
+        message: "body validation failed",
+        error: validationResult.error.issues,
       });
+    }
+
+    const { email, password } = validationResult.data;
+
+    const [userSelect] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.email, email));
+
+    if (!userSelect) {
+      return res
+        .status(404)
+        .json({ message: `user with email ${email} does not exists` });
+    }
+
+    const existingSalt = userSelect.salt!;
+    const hash = createHmac("sha256", existingSalt)
+      .update(password)
+      .digest("hex");
+
+    if (userSelect.password !== hash)
+      return res
+        .status(400)
+        .json({ message: "email or password is incorrect" });
+
+    //TODO: create token and send it to user
+    
+    let token = 1
+
+    return res.json({ message: "signin success", data: { token: token++ } });
   }
 }
 

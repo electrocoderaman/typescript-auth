@@ -4,7 +4,7 @@ import { signUpPayloadModel, signInPayloadModel } from "./models.js";
 import { db } from "../../db/index.js";
 import { usersTable } from "../../db/schema.js";
 import { eq } from "drizzle-orm";
-import { createUserToken } from "./utils/token.js";
+import { createUserToken, type userTokenPayload } from "./utils/token.js";
 
 class AuthenticationController {
   public async handleSignUp(req: Request, res: Response) {
@@ -86,6 +86,25 @@ class AuthenticationController {
     const token = createUserToken({ id: userSelect.id });
 
     return res.json({ message: "signin success", data: { token } });
+  }
+
+  public async handleGetMe(req: Request, res: Response) {
+    //@ts-ignore
+    const { id } = req.user! as userTokenPayload;
+
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, id));
+
+    return res.status(200).json({
+      message: "User found",
+      user: {
+        firstName: user?.firstName,
+        lastName: user?.lastName,
+        email: user?.email,
+      },
+    });
   }
 }
 

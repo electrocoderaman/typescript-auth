@@ -4,6 +4,7 @@ import { signUpPayloadModel, signInPayloadModel } from "./models.js";
 import { db } from "../../db/index.js";
 import { usersTable } from "../../db/schema.js";
 import { eq } from "drizzle-orm";
+import { createUserToken } from "./utils/token.js";
 
 class AuthenticationController {
   public async handleSignUp(req: Request, res: Response) {
@@ -82,11 +83,9 @@ class AuthenticationController {
         .status(400)
         .json({ message: "email or password is incorrect" });
 
-    //TODO: create token and send it to user
-    
-    let token = 1
+    const token = createUserToken({ id: userSelect.id });
 
-    return res.json({ message: "signin success", data: { token: token++ } });
+    return res.json({ message: "signin success", data: { token } });
   }
 }
 
